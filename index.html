@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>โปรแกรมคำนวณภาษีบุคคลธรรมดา 2569</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts สำหรับภาษาไทย -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- React & ReactDOM (ผ่าน CDN) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel (สำหรับแปลง JSX ให้ทำงานใน HTML ได้) โดยระบุเวอร์ชันเพื่อป้องกันปัญหา JSX Runtime อัตโนมัติ -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #f8fafc;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    /** @jsx React.createElement */
+    /** @jsxFrag React.Fragment */
+    
+    const { useState, useEffect } = React;
+
+    // --- SVG Icons Components (ทดแทน Lucide React) ---
+    const Calculator = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16.01" y1="10" y2="10"/><line x1="12" x2="12.01" y1="10" y2="10"/><line x1="8" x2="8.01" y1="10" y2="10"/><line x1="16" x2="16.01" y1="14" y2="14"/><line x1="12" x2="12.01" y1="14" y2="14"/><line x1="8" x2="8.01" y1="14" y2="14"/><line x1="16" x2="16.01" y1="18" y2="18"/><line x1="12" x2="12.01" y1="18" y2="18"/><line x1="8" x2="8.01" y1="18" y2="18"/></svg>;
+    const Wallet = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>;
+    const Settings2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="7" r="3"/><circle cx="7" cy="17" r="3"/></svg>;
+    const ChevronDown = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>;
+    const ChevronUp = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m18 15-6-6-6 6"/></svg>;
+    const Receipt = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17V7"/></svg>;
+    const PieChart = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>;
+    const Info = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+
+    // --- Main App Component ---
+    const TaxCalculator = () => {
+      // State Management
+      const [incomes, setIncomes] = useState({
+        inc1: { label: '40(1) เงินเดือน, ค่าจ้าง, โบนัส', info: 'หัก 50% (รวม 40(2) สูงสุด 100,000 บาท)', amount: '', pct: 50, wht: '' },
+        inc2: { label: '40(2) รับจ้างทั่วไป, ฟรีแลนซ์', info: 'หัก 50% (รวม 40(1) สูงสุด 100,000 บาท)', amount: '', pct: 50, wht: '' },
+        inc3: { label: '40(3) ค่าลิขสิทธิ์, สิทธิบัตร', info: 'หัก 50% (สูงสุด 100,000 บาท)', amount: '', pct: 50, wht: '' },
+        inc4: { label: '40(4) ดอกเบี้ย, ปันผล, คริปโต', info: 'หักค่าใช้จ่ายเหมาไม่ได้', amount: '', pct: 0, wht: '' },
+        inc5: { label: '40(5) ค่าเช่าทรัพย์สิน', info: 'หัก 10-30% ตามประเภท (ไม่มีเพดานสูงสุด)', amount: '', pct: 30, wht: '' },
+        inc6: { label: '40(6) วิชาชีพอิสระ (หมอ, ทนาย)', info: 'หัก 30% หรือ 60% สำหรับแพทย์ (ไม่มีเพดาน)', amount: '', pct: 30, wht: '' },
+        inc7: { label: '40(7) รับเหมา (ผู้รับเหมาจัดหาสัมภาระ)', info: 'หัก 60% (ไม่มีเพดานสูงสุด)', amount: '', pct: 60, wht: '' },
+        inc8: { label: '40(8) ธุรกิจอื่นๆ, ขายของออนไลน์', info: 'หัก 60% (ไม่มีเพดานสูงสุด)', amount: '', pct: 60, wht: '' },
+      });
+
+      const [caps, setCaps] = useState({ cap12: 100000, cap3: 100000 });
+      const [allowances, setAllowances] = useState({ personal: 60000, others: '' });
+      const [isElderly, setIsElderly] = useState(false);
+      const [showAdvanced, setShowAdvanced] = useState(false);
+
+      // Calculation Logic
+      const parseNum = (val) => {
+        if (!val) return 0;
+        return parseFloat(val.toString().replace(/,/g, '')) || 0;
+      };
+
+      const calculateTax = () => {
+        const rawIncomes = Object.keys(incomes).reduce((acc, key) => {
+          acc[key] = parseNum(incomes[key].amount);
+          return acc;
+        }, {});
+        
+        const rawWht = Object.keys(incomes).reduce((acc, key) => {
+          acc[key] = parseNum(incomes[key].wht);
+          return acc;
+        }, {});
+        
+        const totalIncome = Object.values(rawIncomes).reduce((sum, val) => sum + val, 0);
+        const totalWht = Object.values(rawWht).reduce((sum, val) => sum + val, 0);
+
+        const deduct1 = rawIncomes.inc1 * (incomes.inc1.pct / 100);
+        const deduct2 = rawIncomes.inc2 * (incomes.inc2.pct / 100);
+        const totalDeduct12 = Math.min(deduct1 + deduct2, caps.cap12);
+        const deduct3 = Math.min(rawIncomes.inc3 * (incomes.inc3.pct / 100), caps.cap3);
+        const deduct4 = rawIncomes.inc4 * (incomes.inc4.pct / 100);
+        const deduct5 = rawIncomes.inc5 * (incomes.inc5.pct / 100);
+        const deduct6 = rawIncomes.inc6 * (incomes.inc6.pct / 100);
+        const deduct7 = rawIncomes.inc7 * (incomes.inc7.pct / 100);
+        const deduct8 = rawIncomes.inc8 * (incomes.inc8.pct / 100);
+
+        const totalDeductions = totalDeduct12 + deduct3 + deduct4 + deduct5 + deduct6 + deduct7 + deduct8;
+        const elderlyAllowance = isElderly ? 190000 : 0;
+        const totalAllowances = parseNum(allowances.personal) + parseNum(allowances.others) + elderlyAllowance;
+
+        let netIncome = totalIncome - totalDeductions - totalAllowances;
+        if (netIncome < 0) netIncome = 0;
+
+        const brackets = [
+          { min: 0, max: 150000, rate: 0 },
+          { min: 150000, max: 300000, rate: 5 },
+          { min: 300000, max: 500000, rate: 10 },
+          { min: 500000, max: 750000, rate: 15 },
+          { min: 750000, max: 1000000, rate: 20 },
+          { min: 1000000, max: 2000000, rate: 25 },
+          { min: 2000000, max: 5000000, rate: 30 },
+          { min: 5000000, max: Infinity, rate: 35 },
+        ];
+
+        let totalTax = 0;
+        const taxSteps = [];
+
+        for (let i = 0; i < brackets.length; i++) {
+          const b = brackets[i];
+          if (netIncome > b.min) {
+            const taxableInThisBracket = Math.min(netIncome, b.max) - b.min;
+            const taxInThisBracket = taxableInThisBracket * (b.rate / 100);
+            totalTax += taxInThisBracket;
+            
+            taxSteps.push({
+              rate: b.rate,
+              range: `${b.min.toLocaleString()} - ${b.max === Infinity ? 'ขึ้นไป' : b.max.toLocaleString()}`,
+              taxable: taxableInThisBracket,
+              tax: taxInThisBracket
+            });
+          }
+        }
+
+        const parsedWithholding = totalWht;
+        const payableTax = totalTax - parsedWithholding;
+
+        return { totalIncome, totalDeductions, totalAllowances, netIncome, totalTax, taxSteps, elderlyAllowance, parsedWithholding, payableTax };
+      };
+
+      const results = calculateTax();
+
+      // Handlers
+      const handleIncomeChange = (key, field, value) => {
+        if ((field === 'amount' || field === 'wht') && value !== '' && !/^\d*\.?\d*$/.test(value.replace(/,/g, ''))) return;
+        setIncomes(prev => ({
+          ...prev,
+          [key]: { ...prev[key], [field]: value }
+        }));
+      };
+
+      const formatNumberInput = (val) => {
+        if (!val) return '';
+        const num = parseFloat(val.toString().replace(/,/g, ''));
+        if (isNaN(num)) return val;
+        return num.toLocaleString();
+      };
+
+      return (
+        <div className="min-h-screen text-slate-800 p-4 md:p-8">
+          <div className="max-w-6xl mx-auto space-y-6">
+            
+            {/* Header */}
+            <header className="bg-white rounded-2xl shadow-sm p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-slate-200">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-indigo-700 flex items-center gap-3">
+                  <Calculator className="w-8 h-8" />
+                  โปรแกรมคำนวณภาษีบุคคลธรรมดา
+                </h1>
+                <p className="text-slate-500 mt-1">ปีภาษี 2569 (ยื่นแบบต้นปี 2570) - วางแผนและประมาณการภาษีประจำปี</p>
+              </div>
+              <div className="bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100">
+                <span className="text-sm text-indigo-600 font-medium">จำลองข้อมูลได้เต็มรูปแบบ</span>
+              </div>
+            </header>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Left Column */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* Incomes */}
+                <section className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                  <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                    <Wallet className="w-6 h-6 text-emerald-600" />
+                    <h2 className="text-xl font-bold text-slate-800">รายรับแยกตามประเภท (มาตรา 40)</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {Object.entries(incomes).map(([key, data]) => (
+                      <div key={key} className="flex flex-col md:flex-row md:items-start md:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors">
+                        <div className="flex-[2] w-full">
+                          <label className="block text-sm font-semibold text-slate-700 mb-1">
+                            {data.label}
+                            <span className="block text-xs font-normal text-slate-500 mt-0.5">{data.info}</span>
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">฿</span>
+                            <input
+                              type="text"
+                              value={formatNumberInput(data.amount)}
+                              onChange={(e) => handleIncomeChange(key, 'amount', e.target.value.replace(/,/g, ''))}
+                              placeholder="รายรับทั้งปี"
+                              className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex-1 w-full">
+                          <label className="block text-sm font-semibold text-slate-700 mb-1">หักเหมา (%)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={data.pct}
+                              onChange={(e) => handleIncomeChange(key, 'pct', e.target.value)}
+                              className="w-full pl-3 pr-8 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-center"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 w-full">
+                          <label className="block text-sm font-semibold text-slate-700 mb-1 text-rose-600">หัก ณ ที่จ่าย</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">฿</span>
+                            <input
+                              type="text"
+                              value={formatNumberInput(data.wht)}
+                              onChange={(e) => handleIncomeChange(key, 'wht', e.target.value.replace(/,/g, ''))}
+                              placeholder="0"
+                              className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-rose-400 focus:border-rose-400 outline-none transition-all"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Advanced Settings */}
+                  <button 
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="mt-6 flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                    ตั้งค่าเพดานการหักค่าใช้จ่ายเหมาจ่าย (ตามกฎหมายกำหนด)
+                    {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="mt-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-4">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1">
+                          <label className="block text-sm text-slate-700 mb-1">เพดานหักค่าใช้จ่ายรวม 40(1)+(2)</label>
+                          <input
+                            type="number"
+                            value={caps.cap12}
+                            onChange={(e) => setCaps({...caps, cap12: parseFloat(e.target.value) || 0})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">*ปัจจุบันกฎหมายกำหนดสูงสุด 100,000 บาท</p>
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm text-slate-700 mb-1">เพดานหักค่าใช้จ่าย 40(3)</label>
+                          <input
+                            type="number"
+                            value={caps.cap3}
+                            onChange={(e) => setCaps({...caps, cap3: parseFloat(e.target.value) || 0})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                {/* Allowances */}
+                <section className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                  <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                    <Receipt className="w-6 h-6 text-rose-500" />
+                    <h2 className="text-xl font-bold text-slate-800">ค่าลดหย่อนภาษี</h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">ลดหย่อนส่วนตัว (บาท)</label>
+                      <input
+                        type="text"
+                        value={formatNumberInput(allowances.personal)}
+                        onChange={(e) => setAllowances({...allowances, personal: e.target.value.replace(/,/g, '')})}
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-rose-500 outline-none bg-slate-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">ลดหย่อนอื่นๆ รวม (บาท)</label>
+                      <input
+                        type="text"
+                        value={formatNumberInput(allowances.others)}
+                        onChange={(e) => setAllowances({...allowances, others: e.target.value.replace(/,/g, '')})}
+                        placeholder="เช่น ประกัน, SSF/RMF, บริจาค ฯลฯ"
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-rose-500 outline-none"
+                      />
+                    </div>
+                    
+                    <div className="md:col-span-2 mt-2">
+                      <label className="flex items-center gap-3 cursor-pointer p-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors w-fit">
+                        <input
+                          type="checkbox"
+                          checked={isElderly}
+                          onChange={(e) => setIsElderly(e.target.checked)}
+                          className="w-5 h-5 rounded border-slate-300 text-rose-500 focus:ring-rose-500 cursor-pointer"
+                        />
+                        <div>
+                          <span className="block text-sm font-bold text-slate-700">อายุ 65 ปีขึ้นไป</span>
+                          <span className="block text-xs text-slate-500">ได้รับสิทธิยกเว้นเงินได้ 190,000 บาท</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              {/* Right Column (Summary) */}
+              <div className="lg:col-span-4">
+                <div className="bg-indigo-900 rounded-2xl shadow-lg text-white sticky top-8 overflow-hidden">
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold flex items-center gap-2 mb-6 text-indigo-100">
+                      <PieChart className="w-6 h-6" />
+                      สรุปการคำนวณ
+                    </h3>
+                    
+                    <div className="space-y-4 text-sm">
+                      <div className="flex justify-between items-center pb-3 border-b border-indigo-800">
+                        <span className="text-indigo-200">รายได้รวมทั้งหมด:</span>
+                        <span className="font-semibold text-lg">{results.totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-3 border-b border-indigo-800">
+                        <span className="text-indigo-200">หักค่าใช้จ่ายรวม:</span>
+                        <span className="font-semibold text-rose-300">- {results.totalDeductions.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-3 border-b border-indigo-800">
+                        <span className="text-indigo-200">หักลดหย่อนรวม:</span>
+                        <span className="font-semibold text-rose-300">- {results.totalAllowances.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                      
+                      {results.parsedWithholding > 0 && (
+                        <div className="flex justify-between items-center pb-3 border-b border-indigo-800">
+                          <span className="text-indigo-200">ภาษีหัก ณ ที่จ่ายรวม:</span>
+                          <span className="font-semibold text-emerald-300">- {results.parsedWithholding.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                      )}
+                      
+                      <div className="bg-indigo-800/50 rounded-xl p-4 mt-6">
+                        <span className="block text-center text-indigo-200 text-sm mb-1">เงินได้สุทธิเพื่อคำนวณภาษี</span>
+                        <span className="block text-center text-3xl font-bold text-emerald-400">
+                          {results.netIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-950 p-6">
+                    <span className="block text-center text-indigo-300 text-sm mb-2">
+                      {results.payableTax > 0 ? 'ภาษีที่คุณต้องชำระเพิ่ม (บาท)' : results.payableTax < 0 ? 'ภาษีที่คุณจะได้รับคืน (บาท)' : 'ภาษีที่คุณต้องชำระ (บาท)'}
+                    </span>
+                    <span className={`block text-center text-5xl font-black ${results.payableTax < 0 ? 'text-emerald-400' : 'text-white'}`}>
+                      {Math.abs(results.payableTax).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                    
+                    <p className="text-center text-xs text-indigo-400 mt-4">
+                      (ภาษีคำนวณได้ทั้งหมด {results.totalTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท)
+                    </p>
+                    
+                    {results.totalTax > 0 && (
+                      <p className="text-center text-xs text-indigo-500 mt-1">
+                        คิดเป็น {( (results.totalTax / results.totalIncome) * 100 || 0 ).toFixed(2)}% ของรายได้
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {results.taxSteps.length > 0 && (
+                   <div className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                     <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                       <Info className="w-5 h-5 text-indigo-500" />
+                       รายละเอียดการคำนวณภาษี
+                     </h4>
+                     <div className="space-y-3">
+                       {results.taxSteps.map((step, idx) => (
+                         <div key={idx} className="text-sm bg-slate-50 rounded-lg p-3 border border-slate-100 flex flex-col gap-1">
+                           <div className="flex justify-between font-medium text-slate-700">
+                             <span>ขั้น {step.range} (อัตรา {step.rate}%)</span>
+                             <span className="text-slate-900">{step.tax.toLocaleString(undefined, {minimumFractionDigits: 2})} ฿</span>
+                           </div>
+                           <div className="text-xs text-slate-500">
+                             คิดจากเงินได้สุทธิส่วนนี้: {step.taxable.toLocaleString()} ฿
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Render the App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<TaxCalculator />);
+  </script>
+</body>
+</html>
